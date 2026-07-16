@@ -1,0 +1,22 @@
+﻿# ambientes
+venv/
+.conda/
+__pycache__/
+*.pyc
+
+# saídas de simulação e treino
+outputs/
+tb/
+*.db
+*.zip
+*.pkl
+tripinfo*.xml
+*queue*.xml
+*.log
+
+# OSM cru (pesado; a rede convertida é o que importa)
+*.osm
+*.osm.xml
+
+# lixo do sistema
+.ipynb_checkpoints/
