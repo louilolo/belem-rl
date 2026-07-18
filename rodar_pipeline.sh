@@ -23,6 +23,12 @@ conda activate belem
 # `python` apontar pro venv errado (sem sumo_rl/stable_baselines3/optuna instalados).
 PYTHON="$CONDA_PREFIX/bin/python"
 
+# Sem isso, com stdout indo pra um arquivo (não um terminal), o Python usa buffer cheio em
+# vez de por linha -- os prints ficam "presos" e só aparecem no log quando o buffer enche
+# ou o processo termina (a saída bruta do SUMO não sofre disso, por isso ela sempre aparece
+# na hora enquanto os prints do próprio script parecem sumir ou vir fora de ordem).
+export PYTHONUNBUFFERED=1
+
 mkdir -p outputs/logs
 
 echo "=========================================="
