@@ -14,6 +14,7 @@ import os
 import sys
 import csv
 import warnings
+import multiprocessing
 
 import optuna
 
@@ -40,6 +41,7 @@ N_EVAL_EPISODIOS = CONFIG_DQN['train_params']['optuna']['n_eval_episodios']
 N_TRIALS = CONFIG_DQN['optuna']['n_trials']
 METRICA_OBJETIVO = CONFIG['metrica_objetivo']
 DIRECAO = CONFIG['direcao']
+PARALELIZAR_OPTUNA = CONFIG.get('paralelizar_optuna', False)
 
 CSV_COLUNAS = ['trial', 'reward_function'] + list(CONFIG_DQN['hyperparams'].keys()) + [
     'system_mean_waiting_time', 'system_mean_speed', 'system_total_stopped',
@@ -102,23 +104,37 @@ def objective(trial, nome_recompensa, caminho_csv):
     return metricas[METRICA_OBJETIVO]
 
 
+def rodar_para_recompensa(nome_recompensa):
+    print("\n=========================================")
+    print(f" OPTUNA (DQN) -- {nome_recompensa}")
+    print("=========================================")
+
+    caminho_csv = f'outputs/dqn_{nome_recompensa}_optuna.csv'
+    study = optuna.create_study(
+        direction=DIRECAO,
+        storage=f'sqlite:///outputs/optuna_independentes_dqn_{nome_recompensa}.db',
+        study_name=f'independentes_dqn_{nome_recompensa}',
+        load_if_exists=True,
+    )
+    study.optimize(lambda trial: objective(trial, nome_recompensa, caminho_csv), n_trials=N_TRIALS)
+
+    print(f"\nMelhores parâmetros para {nome_recompensa}: {study.best_params}")
+    print(f"Melhor {METRICA_OBJETIVO}: {study.best_value}")
+
+
 if __name__ == "__main__":
-    for nome_recompensa in RECOMPENSAS:
-        print("\n=========================================")
-        print(f" OPTUNA (DQN) -- {nome_recompensa}")
-        print("=========================================")
-
-        caminho_csv = f'outputs/dqn_{nome_recompensa}_optuna.csv'
-        study = optuna.create_study(
-            direction=DIRECAO,
-            storage=f'sqlite:///outputs/optuna_independentes_dqn_{nome_recompensa}.db',
-            study_name=f'independentes_dqn_{nome_recompensa}',
-            load_if_exists=True,
-        )
-        study.optimize(lambda trial: objective(trial, nome_recompensa, caminho_csv), n_trials=N_TRIALS)
-
-        print(f"\nMelhores parâmetros para {nome_recompensa}: {study.best_params}")
-        print(f"Melhor {METRICA_OBJETIVO}: {study.best_value}")
+    if PARALELIZAR_OPTUNA:
+        # 1 processo por recompensa, ao mesmo tempo -- cada uma já tem seu próprio .db,
+        # sem conflito de escrita entre os processos.
+        print(f"Rodando Optuna (DQN) em paralelo pras {len(RECOMPENSAS)} recompensas...")
+        processos = [multiprocessing.Process(target=rodar_para_recompensa, args=(r,)) for r in RECOMPENSAS]
+        for p in processos:
+            p.start()
+        for p in processos:
+            p.join()
+    else:
+        for nome_recompensa in RECOMPENSAS:
+            rodar_para_recompensa(nome_recompensa)
 
     print("\n=========================================")
     print(" PIPELINE DQN CONCLUÍDO")

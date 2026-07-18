@@ -82,3 +82,8 @@ dqn:
 recompensas: [diff_waiting_time, velocity_time, velocity_time_delta]
 metrica_objetivo: system_mean_waiting_time  # métrica do dict de avaliação que o Optuna otimiza
 direcao: minimize                            # minimize ou maximize
+
+# Se true, pipeline_optuna_independentes.py roda o study de cada função de recompensa em um
+# processo separado, ao mesmo tempo (cada uma já tem seu próprio .db, sem conflito). Se
+# false, roda uma recompensa de cada vez (mais devagar, mas usa menos CPU/RAM simultânea).
+paralelizar_optuna: true
