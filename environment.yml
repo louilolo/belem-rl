@@ -9,6 +9,7 @@ dependencies:
       - stable-baselines3[extra]>=2.0.0
       - optuna
       - optuna-dashboard
+      - pyyaml
       - pandas
       - matplotlib
       - seaborn
