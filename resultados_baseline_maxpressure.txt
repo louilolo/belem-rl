@@ -1,4 +1,0 @@
-=== Resultados do Baseline (Tempo Fixo) ===
-Tempo médio de espera parado (waitingTime): 22.93 segundos
-Atraso médio na viagem (timeLoss): 50.12 segundos
-===========================================
