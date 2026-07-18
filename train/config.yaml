@@ -1,0 +1,84 @@
+# Configuração central do pipeline de treino (PPO e DQN, agentes independentes por semáforo).
+# Editar aqui em vez de mexer direto nos scripts em train/ppo/ e train/dqn/.
+
+ppo:
+  # Valores fixos/padrão: usados direto na versão "sem Optuna", e como base na versão
+  # "com Optuna" pra qualquer hiperparâmetro que NÃO esteja em optuna.search_params.
+  hyperparams:
+    learning_rate: 0.0003
+    gamma: 0.99
+    n_steps: 1024
+    batch_size: 64
+    ent_coef: 0.01
+    min_green: 10
+    peso_recompensa: 0.95
+
+  optuna:
+    n_trials: 60
+    # Só esses hiperparâmetros são de fato sorteados pelo Optuna por trial -- os outros
+    # ficam fixos no valor de "hyperparams" acima, mesmo que tenham espaco_busca definido.
+    search_params: [learning_rate, gamma, ent_coef, min_green, peso_recompensa]
+    espaco_busca:
+      learning_rate: {tipo: float, min: 1.0e-5, max: 1.0e-3, log: true}
+      gamma: {tipo: float, min: 0.8, max: 0.999}
+      n_steps: {tipo: categorical, valores: [64, 128, 256]}
+      batch_size: {tipo: categorical, valores: [32, 64]}
+      ent_coef: {tipo: float, min: 1.0e-8, max: 0.1, log: true}
+      min_green: {tipo: int, min: 10, max: 20}
+      peso_recompensa: {tipo: float, min: 0.5, max: 1.0}
+
+  train_params:
+    optuna:
+      n_rodadas: 5
+      timesteps_por_turno: 800
+      n_eval_episodios: 3
+    modelos_finais:
+      n_rodadas: 10
+      timesteps_por_turno: 2000
+      n_eval_episodios: 5
+
+dqn:
+  hyperparams:
+    learning_rate: 0.0001
+    gamma: 0.99
+    batch_size: 64
+    train_freq: 4
+    target_update_interval: 500
+    exploration_fraction: 0.1
+    exploration_final_eps: 0.05
+
+    buffer_size: 50000
+    learning_starts: 100
+    min_green: 10
+    peso_recompensa: 0.95 # peso para as recompensas de  
+
+  optuna:
+    n_trials: 60
+    # buffer_size/learning_starts não entram aqui -- ficam sempre fixos em "hyperparams".
+    search_params: [learning_rate, gamma, target_update_interval,
+                     exploration_fraction, exploration_final_eps, min_green, peso_recompensa]
+    espaco_busca:
+      learning_rate: {tipo: float, min: 1.0e-5, max: 1.0e-3, log: true}
+      gamma: {tipo: float, min: 0.8, max: 0.999}
+      batch_size: {tipo: categorical, valores: [32, 64, 128]}
+      train_freq: {tipo: categorical, valores: [1, 4, 8]}
+      target_update_interval: {tipo: int, min: 100, max: 1000}
+      exploration_fraction: {tipo: float, min: 0.05, max: 0.3}
+      exploration_final_eps: {tipo: float, min: 0.01, max: 0.2}
+      min_green: {tipo: int, min: 10, max: 20}
+      peso_recompensa: {tipo: float, min: 0.5, max: 1.0}
+
+  train_params:
+    optuna:
+      n_rodadas: 5
+      timesteps_por_turno: 800
+      n_eval_episodios: 3
+    modelos_finais:
+      n_rodadas: 10
+      timesteps_por_turno: 2000
+      n_eval_episodios: 5
+
+# Compartilhado entre os dois algoritmos.
+recompensas: [diff_waiting_time, velocity_time, velocity_time_delta]
+metrica_objetivo: system_mean_waiting_time  # métrica do dict de avaliação que o Optuna otimiza
+direcao: minimize                            # minimize ou maximize

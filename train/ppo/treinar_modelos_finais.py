@@ -2,10 +2,10 @@
 {com Optuna, sem Optuna}), depois de rodar pipeline_optuna_independentes.py com as 3
 recompensas em RECOMPENSAS (cada uma com seu próprio study do Optuna).
 
-- "Com Optuna": usa os hiperparâmetros vencedores do PRÓPRIO study daquela função de
-  recompensa (inclusive o peso, quando ela tiver -- diff_waiting_time não tem).
-- "Sem Optuna": usa hiperparâmetros fixos (HIPERPARAMS_SEM_OPTUNA) e PESO_RECOMPENSA_PADRAO
-  pras 3 recompensas.
+- "Com Optuna": começa dos hiperparâmetros fixos em train/config.yaml (ppo.hyperparams) e
+  sobrescreve com os vencedores do PRÓPRIO study daquela função de recompensa -- só os que
+  estavam em ppo.optuna.search_params (os demais ficam no valor fixo).
+- "Sem Optuna": usa ppo.hyperparams direto, sem nenhuma tunagem.
 
 Cada uma das 6 configurações salva os 9 modelos (1 por semáforo) em
 outputs/modelos/ppo/{com_optuna|sem_optuna}/{reward_function}/{ts_id}.zip, e a avaliação final
@@ -19,6 +19,8 @@ import optuna
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'reward'))
 from rewards import velocity_time, velocity_time_delta  # noqa: E402
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config import carregar_config  # noqa: E402
 from treinar_agentes_independentes import (  # noqa: E402
     criar_sumo_compartilhado,
     criar_modelos,
@@ -28,17 +30,12 @@ from treinar_agentes_independentes import (  # noqa: E402
 
 os.makedirs('outputs', exist_ok=True)
 
-RECOMPENSAS = ['diff_waiting_time', 'velocity_time', 'velocity_time_delta']
-N_RODADAS = 3
-TIMESTEPS_POR_TURNO = 1200
-N_EVAL_EPISODIOS = 2
-
-# peso usado na versão "sem Optuna" (fixo) e como fallback pra diff_waiting_time (que não tem peso tunado).
-PESO_RECOMPENSA_PADRAO = 0.95
-MIN_GREEN_PADRAO = 10
-
-# Hiperparâmetros fixos (não tunados) pra versão "sem Optuna".
-HIPERPARAMS_SEM_OPTUNA = dict(learning_rate=3e-4, gamma=0.99, n_steps=1024, batch_size=64, ent_coef=0.01)
+CONFIG = carregar_config()
+CONFIG_PPO = CONFIG['ppo']
+RECOMPENSAS = CONFIG['recompensas']
+N_RODADAS = CONFIG_PPO['train_params']['modelos_finais']['n_rodadas']
+TIMESTEPS_POR_TURNO = CONFIG_PPO['train_params']['modelos_finais']['timesteps_por_turno']
+N_EVAL_EPISODIOS = CONFIG_PPO['train_params']['modelos_finais']['n_eval_episodios']
 
 CSV_COLUNAS = ['reward_function', 'com_optuna', 'system_mean_waiting_time', 'system_mean_speed', 'system_total_stopped']
 
@@ -53,23 +50,35 @@ def construir_reward_fn(nome, peso):
     raise ValueError(f"Recompensa desconhecida: {nome}")
 
 
+def hiperparams_sem_optuna():
+    """Hiperparâmetros fixos direto de train/config.yaml (ppo.hyperparams), sem nenhuma
+    tunagem -- min_green e peso_recompensa também vêm de lá."""
+    hiperparams = dict(CONFIG_PPO['hyperparams'])
+    min_green = hiperparams.pop('min_green')
+    peso = hiperparams.pop('peso_recompensa')
+    return hiperparams, min_green, peso
+
+
 def carregar_melhores_hiperparametros(nome_recompensa):
-    """Lê o study do Optuna DAQUELA função de recompensa (1 study por recompensa, criado
-    por pipeline_optuna_independentes.py) e separa min_green e peso_recompensa (que são
-    parâmetros do ambiente/recompensa, não do modelo PPO)."""
+    """Começa dos hiperparâmetros fixos (ppo.hyperparams) e sobrescreve com os vencedores
+    do PRÓPRIO study daquela função de recompensa (1 study por recompensa, criado por
+    pipeline_optuna_independentes.py) -- só os que de fato entraram na busca (search_params)."""
     study_name = f'independentes_{nome_recompensa}'
     storage = f'sqlite:///outputs/optuna_independentes_{nome_recompensa}.db'
     try:
         study = optuna.load_study(study_name=study_name, storage=storage)
-        params = dict(study.best_params)
+        melhores = dict(study.best_params)
     except (ValueError, KeyError):
         raise RuntimeError(
             f"Não achei um trial completo do study '{study_name}' em {storage}. "
             f"Rode primeiro pipeline_optuna_independentes.py com '{nome_recompensa}' em RECOMPENSAS."
         )
-    min_green = params.pop('min_green', MIN_GREEN_PADRAO)
-    peso = params.pop('peso_recompensa', PESO_RECOMPENSA_PADRAO)  # diff_waiting_time não tem peso tunado
-    return params, min_green, peso
+
+    hiperparams = dict(CONFIG_PPO['hyperparams'])
+    hiperparams.update(melhores)
+    min_green = hiperparams.pop('min_green')
+    peso = hiperparams.pop('peso_recompensa')
+    return hiperparams, min_green, peso
 
 
 def salvar_modelos(modelos, pasta):
@@ -123,9 +132,10 @@ if __name__ == "__main__":
         hiperparams_optuna, min_green_optuna, peso_optuna = carregar_melhores_hiperparametros(nome_recompensa)
         print(f"[{nome_recompensa}] hiperparâmetros do Optuna: {hiperparams_optuna}, "
               f"min_green={min_green_optuna}, peso={peso_optuna}")
-
         treinar_e_salvar(nome_recompensa, hiperparams_optuna, min_green_optuna, peso_optuna, com_optuna=True, csv_path=csv_path)
-        treinar_e_salvar(nome_recompensa, HIPERPARAMS_SEM_OPTUNA, MIN_GREEN_PADRAO, PESO_RECOMPENSA_PADRAO, com_optuna=False, csv_path=csv_path)
+
+        hiperparams_base, min_green_base, peso_base = hiperparams_sem_optuna()
+        treinar_e_salvar(nome_recompensa, hiperparams_base, min_green_base, peso_base, com_optuna=False, csv_path=csv_path)
 
     print("\n=========================================")
     print(" 6 MODELOS FINAIS (PPO) TREINADOS E SALVOS")
