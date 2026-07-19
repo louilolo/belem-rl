@@ -15,6 +15,7 @@ import sys
 import csv
 
 import optuna
+import multiprocessing
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'reward'))
 from rewards import velocity_time, velocity_time_delta  # noqa: E402
@@ -35,6 +36,7 @@ RECOMPENSAS = CONFIG['recompensas']
 N_RODADAS = CONFIG_DQN['train_params']['modelos_finais']['n_rodadas']
 TIMESTEPS_POR_TURNO = CONFIG_DQN['train_params']['modelos_finais']['timesteps_por_turno']
 N_EVAL_EPISODIOS = CONFIG_DQN['train_params']['modelos_finais']['n_eval_episodios']
+PARALELIZAR_OPTUNA = CONFIG.get('paralelizar_optuna', False)
 
 CSV_COLUNAS = ['reward_function', 'com_optuna', 'system_mean_waiting_time', 'system_mean_speed', 'system_total_stopped']
 
@@ -125,17 +127,36 @@ def treinar_e_salvar(nome_recompensa, hiperparams, min_green, peso, com_optuna, 
 
     print(f"[{nome_recompensa} | {tag}] concluído: {metricas}")
 
+def rodar_para_recompensa(recompensa:str, optuna:bool, csv_path:str):
+    if optuna:
+        hiperparams, min_green, peso = carregar_melhores_hiperparametros(recompensa)
+    else:
+        hiperparams, min_green, peso = hiperparams_sem_optuna()
+    print(f"[{recompensa}] hiperparâmetros {"optuna" if optuna else "base"}: {hiperparams}, "
+            f"min_green={min_green}, peso={peso}")
+    treinar_e_salvar(recompensa, hiperparams, min_green, peso, com_optuna=optuna, csv_path=csv_path) 
+    print("\n=========================================")
 
 if __name__ == "__main__":
     csv_path = 'outputs/modelos_finais_dqn.csv'
-    for nome_recompensa in RECOMPENSAS:
-        hiperparams_optuna, min_green_optuna, peso_optuna = carregar_melhores_hiperparametros(nome_recompensa)
-        print(f"[{nome_recompensa}] hiperparâmetros do Optuna: {hiperparams_optuna}, "
-              f"min_green={min_green_optuna}, peso={peso_optuna}")
-        treinar_e_salvar(nome_recompensa, hiperparams_optuna, min_green_optuna, peso_optuna, com_optuna=True, csv_path=csv_path)
 
-        hiperparams_base, min_green_base, peso_base = hiperparams_sem_optuna()
-        treinar_e_salvar(nome_recompensa, hiperparams_base, min_green_base, peso_base, com_optuna=False, csv_path=csv_path)
+    if PARALELIZAR_OPTUNA:
+        tarefas = []
+        for nome_recompensa in RECOMPENSAS:
+            tarefas.append((nome_recompensa, True, csv_path))   # Com Optuna
+            tarefas.append((nome_recompensa, False, csv_path))  # Sem Optuna
+        with multiprocessing.Pool() as pool:
+            pool.starmap(rodar_para_recompensa, tarefas)
+    else:
+        for nome_recompensa in RECOMPENSAS:
+            hiperparams_optuna, min_green_optuna, peso_optuna = carregar_melhores_hiperparametros(nome_recompensa)
+            print(f"[{nome_recompensa}] hiperparâmetros do Optuna: {hiperparams_optuna}, "
+                f"min_green={min_green_optuna}, peso={peso_optuna}")
+            treinar_e_salvar(nome_recompensa, hiperparams_optuna, min_green_optuna, peso_optuna, com_optuna=True, csv_path=csv_path)
+
+            hiperparams_base, min_green_base, peso_base = hiperparams_sem_optuna()
+            treinar_e_salvar(nome_recompensa, hiperparams_base, min_green_base, peso_base, com_optuna=False, csv_path=csv_path)
+
 
     print("\n=========================================")
     print(" 6 MODELOS FINAIS (DQN) TREINADOS E SALVOS")
