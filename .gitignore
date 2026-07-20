@@ -8,12 +8,12 @@ __pycache__/
 #outputs/
 tb/
 outputs/*optuna_trial*.csv
-*.db
+#*.db
 *.zip
 *.pkl
-tripinfo*.xml
-*queue*.xml
-*.log
+#tripinfo*.xml
+#*queue*.xml
+#*.log
 
 # OSM cru (pesado; a rede convertida é o que importa)
 *.osm
