@@ -34,19 +34,19 @@ mkdir -p outputs/logs
 echo "=========================================="
 echo " FASE 1: Optuna (PPO + DQN em paralelo)"
 echo "=========================================="
-"$PYTHON" train/ppo/pipeline_optuna_independentes.py > outputs/logs/optuna_ppo.log 2>&1 &
-PID_PPO=$!
-"$PYTHON" train/dqn/pipeline_optuna_independentes.py > outputs/logs/optuna_dqn.log 2>&1 &
-PID_DQN=$!
+#"$PYTHON" train/ppo/pipeline_optuna_independentes.py > outputs/logs/optuna_ppo.log 2>&1 &
+#PID_PPO=$!
+#"$PYTHON" train/dqn/pipeline_optuna_independentes.py > outputs/logs/optuna_dqn.log 2>&1 &
+#PID_DQN=$!
 
-wait "$PID_PPO"; STATUS_PPO=$?
-wait "$PID_DQN"; STATUS_DQN=$?
+#wait "$PID_PPO"; STATUS_PPO=$?
+#wait "$PID_DQN"; STATUS_DQN=$?
 
-if [ "$STATUS_PPO" -ne 0 ] || [ "$STATUS_DQN" -ne 0 ]; then
-    echo "Fase 1 (Optuna) falhou -- ppo=$STATUS_PPO dqn=$STATUS_DQN."
-    echo "Veja outputs/logs/optuna_ppo.log e outputs/logs/optuna_dqn.log"
-    exit 1
-fi
+#if [ "$STATUS_PPO" -ne 0 ] || [ "$STATUS_DQN" -ne 0 ]; then
+#    echo "Fase 1 (Optuna) falhou -- ppo=$STATUS_PPO dqn=$STATUS_DQN."
+#    echo "Veja outputs/logs/optuna_ppo.log e outputs/logs/optuna_dqn.log"
+#    exit 1
+#fi
 echo "Fase 1 concluída. Logs em outputs/logs/optuna_{ppo,dqn}.log"
 
 echo "=========================================="

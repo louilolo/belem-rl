@@ -5,8 +5,9 @@ __pycache__/
 *.pyc
 
 # saídas de simulação e treino
-outputs/
+#outputs/
 tb/
+outputs/*optuna_trial*.csv
 *.db
 *.zip
 *.pkl

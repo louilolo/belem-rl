@@ -1,0 +1,15 @@
+nohup: ignoring input
+==========================================
+ FASE 1: Optuna (PPO + DQN em paralelo)
+==========================================
+Fase 1 concluída. Logs em outputs/logs/optuna_{ppo,dqn}.log
+==========================================
+ FASE 2: Modelos finais (PPO + DQN em paralelo)
+==========================================
+==========================================
+ PIPELINE COMPLETO
+==========================================
+Resultados:    outputs/modelos_finais_ppo.csv, outputs/modelos_finais_dqn.csv
+Modelos:       outputs/modelos/{ppo,dqn}/{com_optuna,sem_optuna}/{reward}/
+Tensorboard:   outputs/tensorboard/{ppo,dqn}/
+Logs:          outputs/logs/
