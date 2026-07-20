@@ -132,7 +132,7 @@ def rodar_para_recompensa(recompensa:str, optuna:bool, csv_path:str):
         hiperparams, min_green, peso = carregar_melhores_hiperparametros(recompensa)
     else:
         hiperparams, min_green, peso = hiperparams_sem_optuna()
-    print(f"[{recompensa}] hiperparâmetros {"optuna" if optuna else "base"}: {hiperparams}, "
+    print(f"[{recompensa}] hiperparâmetros {'optuna' if optuna else 'base'}: {hiperparams}, "
             f"min_green={min_green}, peso={peso}")
     treinar_e_salvar(recompensa, hiperparams, min_green, peso, com_optuna=optuna, csv_path=csv_path) 
     print("\n=========================================")
