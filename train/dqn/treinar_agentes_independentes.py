@@ -27,13 +27,14 @@ warnings.filterwarnings("ignore", message=".*render_mode.*")
 os.makedirs('outputs', exist_ok=True)
 
 
-def criar_sumo_compartilhado(out_csv_name=None, reward_fn=None, peso=0.95, min_green=10):
+def criar_sumo_compartilhado(out_csv_name=None, reward_fn=None, peso=0.95, min_green=10,
+                              num_seconds=3600, additional_sumo_cmd=None):
     return SumoEnvironment(
         net_file='cenarios/almirante/belem.net.xml',
         route_file='cenarios/almirante/rotas.rou.xml',
         out_csv_name=out_csv_name,
         use_gui=False,
-        num_seconds=3600,
+        num_seconds=num_seconds,
         delta_time=5,
         yellow_time=4,
         min_green=min_green,
@@ -42,6 +43,7 @@ def criar_sumo_compartilhado(out_csv_name=None, reward_fn=None, peso=0.95, min_g
         reward_fn=reward_fn if reward_fn is not None else velocity_time_delta(peso),
         fixed_ts=False,
         sumo_warnings=False,
+        additional_sumo_cmd=additional_sumo_cmd,
     )
 
 
@@ -121,4 +123,6 @@ def avaliar_agentes_independentes(sumo_env, modelos, n_episodios=2):
             valores[k].append(info[k])
         if dones_dict["__all__"]:
             episodios_completos += 1
+            if episodios_completos < n_episodios:
+                obs_dict = sumo_env.reset()  # sem isso, dones fica True pra sempre e "episódios" viram passos soltos
     return {k: float(np.mean(v)) for k, v in valores.items()}

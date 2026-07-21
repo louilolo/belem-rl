@@ -8,6 +8,8 @@ __pycache__/
 #outputs/
 tb/
 outputs/*optuna_trial*.csv
+*reavaliacao*.csv
+*optuna_trial*.csv
 #*.db
 #*.zip
 *.pkl
