@@ -9,7 +9,7 @@ __pycache__/
 tb/
 outputs/*optuna_trial*.csv
 #*.db
-*.zip
+#*.zip
 *.pkl
 #tripinfo*.xml
 #*queue*.xml
