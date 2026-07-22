@@ -14,3 +14,4 @@ dependencies:
       - matplotlib
       - seaborn
       - tensorboard
+      - polars==1.42.0

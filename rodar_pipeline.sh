@@ -67,6 +67,19 @@ if [ "$STATUS_PPO" -ne 0 ] || [ "$STATUS_DQN" -ne 0 ]; then
 fi
 
 echo "=========================================="
+echo " FASE 3: Gerando comparação com baseline"
+echo "=========================================="
+
+"$PYTHON" train/ppo/comparar_baseline.py > outputs/logs/simulacao_baseline_ppo.log 2>&1 &
+PID_PPO=$!
+"$PYTHON" train/dqn/comparar_baseline.py > outputs/logs/simulacao_baseline_dqn.log 2>&1 &
+PID_DQN=$!
+
+wait "$PID_PPO"; STATUS_PPO=$?
+wait "$PID_DQN"; STATUS_DQN=$?
+
+
+echo "=========================================="
 echo " PIPELINE COMPLETO"
 echo "=========================================="
 echo "Resultados:    outputs/modelos_finais_ppo.csv, outputs/modelos_finais_dqn.csv"
